@@ -1,0 +1,6 @@
+{
+  "name": "WebDroid - Cloud Android Emulator",
+  "description": "Access, manage, and operate real Android virtual devices directly in your web browser with live screen streaming, ADB management, APK installation, and touch controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

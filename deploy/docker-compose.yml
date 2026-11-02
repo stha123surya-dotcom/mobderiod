@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # WebDroid Web Gateway & API Server
+  webdroid-web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://webdroid:webdroid_secure_pass@postgres:5432/webdroid_db
+      - REDIS_URL=redis://redis:6379
+      - EMULATOR_WORKER_URL=http://emulator-worker:5555
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - webdroid-net
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: webdroid
+      POSTGRES_PASSWORD: webdroid_secure_pass
+      POSTGRES_DB: webdroid_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - webdroid-net
+
+  # Redis for session coordination
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - webdroid-net
+
+  # Dedicated Android Emulator Worker (requires KVM host)
+  emulator-worker:
+    build:
+      context: ../emulator-worker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    devices:
+      - /dev/kvm:/dev/kvm
+    privileged: true
+    environment:
+      - ANDROID_API=34
+      - EMULATOR_RAM=4096
+      - EMULATOR_CORES=4
+    ports:
+      - "5555:5555"
+      - "8554:8554"
+    volumes:
+      - avd_storage:/root/.android/avd
+    networks:
+      - webdroid-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  avd_storage:
+
+networks:
+  webdroid-net:
+    driver: bridge
